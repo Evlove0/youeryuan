@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- 上述3个meta标签*必须*放在最前面，任何其他内容都*必须*跟随其后！ -->
+    <title>管理员登录</title>
+
+    <link rel="stylesheet" href="../bootstrap/css/bootstrap.css">
+    <link rel="stylesheet" href="../bootstrap/css/bootstrap-table.css">
+
+    <link rel="stylesheet" href="../bootstrap/css/bootstrap-datetimepicker.css">
+    <!-- jQuery (Bootstrap 的所有 JavaScript 插件都依赖 jQuery，所以必须放在前边) -->
+    <script src="../js/jquery-3.1.1.min.js"></script>
+    <!-- 加载 Bootstrap 的所有 JavaScript 插件。你也可以根据需要只加载单个插件。 -->
+    <script src="../bootstrap/js/bootstrap.js"></script>
+    <script src="../bootstrap/js/bootbox.min.js"></script>
+
+    <script src="../bootstrap/js/bootstrap-table.js"></script>
+    <script src="../bootstrap/js/bootstrap-table-zh-CN.js"></script>
+    <script src="../bootstrap/js/fileinput.js"></script>
+    <script src="../bootstrap/js/fileinput_locale_zh.js"></script>
+    <script src="../bootstrap/js/bootstrap-datetimepicker.min.js"></script>
+    <script src="../bootstrap/js/bootstrap-datetimepicker.zh-CN.js"></script>
+
+    <script src="../js/global.js"></script>
+    <title>系统管理</title>
+    <script>
+        loginStr = localStorage.getItem("loginuser") ;
+        if (null == loginStr || loginStr == '') {
+            location.href="../Login.html" ;
+        }
+        // 将localStorage取出字符串转换js对象
+        loginUser = JSON.parse(loginStr) ;
+
+        $(function(){
+            $("#empTable").bootstrapTable({
+                url : serverPath + 'employee/pageData' ,
+                method : 'GET' ,
+                toolbar : '#toolbar' ,   // 为表格绑定工具栏
+                striped: true,			// 显示为斑马线格式，奇偶行不通背景色
+
+                showRefresh: "true",	// 显示刷新按钮
+                showToggle: "true",		// 显示格式切换按钮
+                showColumns: "true",	// 显示列过滤按钮
+
+                // 分页相关 ，如果分页，服務器端返回的数据需要包含有total属性和rows属性
+                pagination: true,		// 显示分页
+                pageNumber: 1,			// 初始化加载第一页
+                pageSize: 2,			// 每页2条数据
+                pageList: [2, 5, 10],	// 可以选择的每页数量
+                sidePagination: "server", //表示服务端请求分页数据
+
+                // 提交到Server的参数列表 ，
+                // 参数设定相关
+                queryParamsType: "undefined",  // undefined：提交到服务器端的参数自定义
+                queryParams: function(params) {
+                    // 参数params中自带 pageSize , pageNumber , sortName , sortOrder
+
+                    // 为params对象增加额外三个属性
+                    params.nameKey = $.trim($("#search_uname").val()) ;
+                    params.mobileKey = $.trim($("#search_mobile").val()) ;
+                    params.gender = $('#formSearch input[name="gender"]:checked').val() ;
+
+                    var state = $('#formSearch input[name="state"]:checked').val() ;
+                    if("-1" != state) {
+                        params.state = $('#formSearch input[name="state"]:checked').val() ;
+                    }
+                    var role = $('#formSearch input[name="role"]:checked').val() ;
+                    if("-1" != role) {
+                        params.role = $('#formSearch input[name="role"]:checked').val() ;
+                    }
+                    console.dir(params) ;
+                    return params ;
+                },
+
+                columns : [
+                    /* {checkbox : true} ,   // 显示为复选框*/
+                    {field : 'id' , title : 'id' , visible : false} ,
+                    {field:'tid' , title : '编号' , formatter: function(value , row , index){
+                            return  '<span class="showDetail" style="color:blue; cursor: pointer; ">'+ value +'</span>';
+                        },
+                        events: updateEvent ,
+                    } ,
+                    {field : 'tname' , title : '姓名' } ,
+                    {field : 'gender' , title : '性别' } ,
+                    {field : 'mobile' , title : '联系电话'} ,
+                    {field : 'role' , title : '角色' , formatter : function(value , row , index){
+                            return  value==0 ? '教工' : '职工' ;
+                        } } ,
+                    {field : 'hiredate' , title : '入职日期' } ,
+                    {field : 'state' , title : '状态' , formatter : function(value , row , index){
+                            switch(value) {
+                                case 0 :  return '正式' ;
+                                case 1 : return '离职 - '+ row.departure ;
+                                case 2 : return '试用' ;
+                            }
+                        } } ,
+
+                    {
+                        title : '操作' ,
+                        formatter: operateFormatter,
+                        events: operateEvent ,
+                    }
+
+                ] ,
+            });
+
+
+            // 搜索按钮动作
+            $("#btn_query").click(function(){
+                $("#empTable").bootstrapTable('refresh') ;
+            });
+
+            // 添加管理员按钮动作
+            $("#addSysuserBtn").click(function () {
+                $.post(
+                    serverPath + "employee/add" ,
+                    $("#addSysuserForm").serialize() ,
+                    function(responseData) {
+                        bootbox.alert(responseData.errMsg) ;
+                        if(0 == responseData.errCode) {
+                            $("#empTable").bootstrapTable('refresh') ;
+                            // 清空表单数据
+                            $("#addSysuserForm")[0].reset() ;
+                            // 关闭模态框
+                            $("#addWindow").modal("hide") ;
+                        }
+                    }
+                );
+            });
+            // 取消添加管理员按钮动作
+            $("#resetSysuserBtn").click(function(){
+                $("#addSysuserForm")[0].reset() ;
+                $("#addWindow").modal("hide") ;
+            });
+
+
+            // 请求所有有效角色
+            $.get(
+                serverPath + "role/getall" ,
+                function(responseData) {
+                    var all = responseData.data ;
+                    var str = "" ;
+                    $.each(all , function(index , item){
+                        str += '<option>' + item.role + '</option>' ;
+                    }) ;
+                    $("#role").html(str) ;
+                }
+            )
+
+            // 显示详情模态框中“更新”按钮动作
+            $("#btn_detailSure").click(function(){
+                $.post(
+                    serverPath + "employee/update" ,
+                    $("#detailForm").serialize() ,
+                    function(resData) {
+                        bootbox.alert(resData.errMsg) ;
+                        if(0 == resData.errCode) {
+                            $("#empTable").bootstrapTable('refresh') ;
+                            // 清空表单数据
+                            $("#detailForm")[0].reset() ;
+                            // 清空头像显示
+                            $("#showPhoto").removeAttr('src') ;
+                            // 关闭模态框
+                            $("#detailWindow").modal("hide") ;
+                        }
+                    }
+                );
+            });
+            // 显示详情模态框中“取消”按钮动作
+            $("#btn_detailCancel").click(function(){
+                $("#detailForm")[0].reset() ;
+                // 清空头像显示
+                $("#showPhoto").removeAttr('src') ;
+                $("#detailWindow").modal("hide") ;
+            });
+
+            $("#showPhoto").click(function(){
+                // 更新头像-FileInput 初始化
+                var oFileInput = new FileInput();
+                oFileInput.Init("userphoto", serverPath + "employee/uploadPhoto");
+                $("#updatePhoto").modal('show') ;
+            });
+
+/*            // 日历控件初始化
+            $('#addBirthDatetimepicker').datetimepicker({
+                format: 'yyyy年mm月dd',
+                autoclose: 1,//选择后自动关闭
+                startView: 'month',
+                minView:'month',
+                maxView:'decade',
+                language:'zh-CN'
+            });
+            $('#addHiredateDatetimepicker').datetimepicker({
+                format: 'yyyy年mm月dd',
+                autoclose: 1,//选择后自动关闭
+                startView: 'month',
+                minView:'month',
+                maxView:'decade',
+                language:'zh-CN'
+            });*/
+        })
+
+        function operateFormatter(value, row, index) {
+            var del = '<button  type="button" class="remove btn btn-xs btn-danger"' +
+                '<span class="glyphicon glyphicon-remove" aria-hidden="true"></span>离职' +
+                '</button>';
+            var change = '<button  type="button" class="change btn btn-xs btn-success"' +
+                '<span class="glyphicon glyphicon-remove" aria-hidden="true"></span>转正' +
+                '</button>';
+            if(row.state == 0) {  // 正式
+                return del ;
+            } else if(row.state == 2) { // 试用
+                return del + "&nbsp;&nbsp;" + change ;
+            }
+        }
+        window.operateEvent = {
+            //  离职处理
+            'click .remove' : function(e , value , row , index) {
+                // 删除逻辑处理
+                bootbox.confirm("确认员工离职?" , function(data){
+                    if(data) {
+                        $.post(
+                            serverPath + "employee/leave" ,
+                            'id=' + row.id ,
+                            function(responseData) {
+                                bootbox.alert(responseData.errMsg) ;
+                                if(0 == responseData.errCode) {
+                                    // 表格刷新
+                                    $("#empTable").bootstrapTable('refresh') ;
+                                }
+                            }
+                        );
+                    }
+                }) ;
+            } ,
+            //  转正处理
+            'click .change' : function(e , value , row , index) {
+                // 删除逻辑处理
+                bootbox.confirm("确认员工转正?" , function(data){
+                    if(data) {
+                        $.post(
+                            serverPath + "employee/hiredate" ,
+                            'id=' + row.id ,
+                            function(responseData) {
+                                bootbox.alert(responseData.errMsg) ;
+                                if(0 == responseData.errCode) {
+                                    // 表格刷新
+                                    $("#empTable").bootstrapTable('refresh') ;
+                                }
+                            }
+                        );
+                    }
+                }) ;
+            }
+        }
+
+        window.updateEvent = {
+            'click .showDetail' : function(e , value , row , index) {
+                localStorage.setItem("currentEId" , row.id) ;
+                console.log(row) ;
+                // 模态框填充数据，显示详情
+                $("#showId").val(row.id);
+                $("#showTid").val(row.tid);
+                $("#showName").val(row.tname);
+                $("#showRole").val(row.role == 0 ? "教工" : "职工");
+                $("#showNation").val(row.nation);
+                $("#showEdu").val(row.education);
+                $("#showSchool").val(row.school);
+                $("#showGender").val(row.gender);
+                $("#showEmail").val(row.email);
+                $("#showBirth").val(row.birth);
+                $("#showMobile").val(row.mobile);
+                $("#showAddr").val(row.address);
+                if (null != row.photo && '' != row.photo && 'null' != row.photo) {
+                    $("#showPhoto").attr('src', row.photo);
+                }
+                $("#showEnterDate").val(row.hiredate) ;
+                $("#showLeaveDate").val(row.departure) ;
+                var statStr = "正式" ;
+                if(row.state == 1) {
+                    statStr = "离职" ;
+                } else if(row.state == 2) {
+                    stateStr = "试用" ;
+                }
+                $("#showState").val(statStr) ;
+
+                // 模态框出现
+                $("#detailWindow").modal("show") ;
+            }
+        }
+
+        //初始化FileInput
+        var FileInput = function () {
+            var oFile = new Object();
+
+            //初始化fileinput控件（第一次初始化）
+            oFile.Init = function(ctrlName, uploadUrl) {
+                var control = $('#' + ctrlName);
+
+                //初始化上传控件的样式
+                control.fileinput({
+                    language: 'zh', //设置语言
+                    uploadUrl: uploadUrl + "?id=" + localStorage.getItem("currentEId"), //上传的地址
+                    allowedFileExtensions : ['jpg', 'png','gif'],
+                    maxFileSize : 2048,			// 以kb为单位
+                    maxFilesNum: 1,
+
+                    showUpload: true, //是否显示上传按钮
+                    showCaption: false,//是否显示标题
+                    browseClass: "btn btn-primary", //按钮样式
+                    //dropZoneEnabled: false,//是否显示拖拽区域
+                    //minImageWidth: 50, //图片的最小宽度
+                    //minImageHeight: 50,//图片的最小高度
+                    //maxImageWidth: 1000,//图片的最大宽度
+                    //maxImageHeight: 1000,//图片的最大高度
+                    //maxFileSize: 0,//单位为kb，如果为0表示不限制文件大小
+                    //minFileCount: 0,
+                    enctype: 'multipart/form-data',
+                    previewFileIcon: "<i class='glyphicon glyphicon-king'></i>",
+                });
+
+                //导入文件上传完成之后的事件
+                $("#userphoto").on("fileuploaded", function (event, data, previewId, index) {
+                    $("#updatePhoto").modal("hide");
+                    localStorage.removeItem("currentEId") ;
+                    console.log(data) ;
+                    var responseData = data.response ;
+                    if(responseData.errCode === 0) {
+                        bootbox.alert('上传成功');
+                        // 清除文件上传预览框
+                        $(event.target).fileinput('clear') ;
+                        // 刷新头像
+                        $("#showPhoto").attr('src' , responseData.data)
+
+                    }
+                }).on("fileerror" , function(event , data , msg){
+                    console.log(msg) ;
+                }) ;
+            }
+            return oFile;
+        };
+    </script>
+
+
+</head>
+<body>
+<div class="container-fluid">
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <h3 class="panel-title">查询条件</h3>
+            <form id="formSearch" class="form-horizontal">
+                <div class="form-group" style="margin-top:15px">
+                    <label class="control-label col-sm-2" for="search_uname">用户名</label>
+                    <div class="col-sm-4">
+                        <input type="text" class="form-control" id="search_uname">
+                    </div>
+                    <label class="control-label col-sm-2" for="search_mobile">电话</label>
+                    <div class="col-md-4">
+                        <input type="text" class="form-control" id="search_mobile">
+                    </div>
+
+                </div>
+                <div class="form-group" style="margin-top:15px">
+                    <label class="control-label col-sm-1" for="search_gender">性别</label>
+                    <div class="radio  col-sm-2">
+                        <label><input type="radio" name="gender" id="search_gender" value="" checked>忽略 </label>
+                        <label><input type="radio" name="gender" value="男">男</label>
+                        <label><input type="radio" name="gender" value="女">女</label>
+                    </div>
+                    <label class="control-label col-md-1" for="search_role">教职工</label>
+                    <div class="radio  col-md-2">
+                        <label><input type="radio" name="role" id="search_role" value="-1" checked>忽略 </label>
+                        <label><input type="radio" name="role" value="1">职工</label>
+                        <label><input type="radio" name="role" value="0">教工</label>
+                    </div>
+                    <label class="control-label col-md-1" for="status">状态</label>
+                    <div class="radio  col-md-2">
+                        <label><input type="radio" name="state" id="status" value="-1" checked>忽略 </label>
+                        <label><input type="radio" name="state" value="0">正式</label>
+                        <label><input type="radio" name="state" value="1">离职</label>
+                        <label><input type="radio" name="state" value="2">试用</label>
+                    </div>
+                    <div class="form-group" style="margin-top:15px">
+                        <div class="col-md-3" style="text-align:left;">
+                            <button type="button" style="margin-left:50px" id="btn_query" class="btn btn-primary">查询</button>
+                            <button type="reset" style="margin-left:50px" id="btn_reset" class="btn btn-info">清空</button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="panel-body">
+            <!-- 工具栏 -->
+            <div id="toolbar" class="btn-group">
+                <button id="btn_add" type="button" class="btn btn-success" data-toggle="modal" data-target="#addWindow">
+                    <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>新增
+                </button>
+                <!--<button id="btn_delete" type="button" class="btn btn-danger">
+                    <span class="glyphicon glyphicon-remove" aria-hidden="true"></span>删除
+                </button>-->
+            </div>
+            <!-- table -->
+            <table id="empTable"></table>
+        </div>
+    </div>
+    <!-- 新增模态框 -->
+    <div class="modal fade" id="addWindow" role="dialog">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"
+                            aria-hidden="true">&times;</button>
+                    <h4 class="modal-title">添加新员工</h4>
+                </div>
+                <form class="form-horizontal" id="addSysuserForm" style="margin: 30px;">
+                    <div class="form-group">
+                        <label for="tName" class="col-md-offset-2 col-md-2 control-label">姓名</label>
+                        <div class="col-md-6">
+                            <input type="text" class="form-control" id="tName" name="tname" />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-md-offset-2 col-md-2 control-label">角色</label>
+                        <div class="radio col-md-6">
+                                <label><input type="radio" name="role" value="0" checked>教工</label>
+                                <label><input type="radio" name="role" value="1">职工</label>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="tNation" class="col-md-offset-2 col-md-2 control-label">民族</label>
+                        <div class="col-md-6">
+                            <input type="text" class="form-control" id="tNation" name="nation" />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="tEdu" class="col-md-offset-2 col-md-2 control-label">学历</label>
+                        <div class="col-md-6">
+                            <input type="text" class="form-control" id="tEdu" name="education" />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="tSchool" class="col-md-offset-2 col-md-2 control-label">毕业院校</label>
+                        <div class="col-md-6">
+                            <input type="text" class="form-control" id="tSchool" name="school" />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label  class="col-md-offset-2 col-md-2 control-label">性别</label>
+                        <div class="radio col-md-6">
+                            <label><input type="radio" name="gender" value="男" checked>男</label>
+                            <label><input type="radio" name="gender" value="女">女</label>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="tEmail" class="col-md-offset-2 col-md-2 control-label">电子邮件</label>
+                        <div class="col-md-6">
+                            <input type="text" class="form-control" id="tEmail" name="email" />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label  class="col-md-offset-2 col-md-2 control-label">生日</label>
+                        <div class="col-md-6">
+                            <div class='input-group date' id='addBirthDatetimepicker'>
+                                <input type='date' class="form-control" name="birth" />
+                            </div>
+                        </div>
+                    </div>
+                    <!--<div class="form-group">
+                        <label  class="col-md-offset-2 col-md-2 control-label">生日</label>
+                        <div class="col-md-6">
+                            <div class='input-group date' id='addBirthDatetimepicker'>
+                                <input type='text' class="form-control" name="birth" />
+                                    <span class="input-group-addon">
+                                        <span class="glyphicon glyphicon-calendar"></span>
+                                    </span>
+                            </div>
+                        </div>
+                    </div>-->
+                    <div class="form-group">
+                        <label for="tMobile" class="col-md-offset-2 col-md-2 control-label">电话</label>
+                        <div class="col-md-6">
+                            <input type="text" class="form-control" id="tMobile" name="mobile" />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="tAddr" class="col-md-offset-2 col-md-2 control-label">地址</label>
+                        <div class="col-md-6">
+                            <input type="text" class="form-control" id="tAddr" name="address" />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label  class="col-md-offset-2 col-md-2 control-label">入职时间</label>
+                        <div class="col-md-6">
+                            <div class='input-group date' id='addHiredateDatetimepicker'>
+                                <input type='date' class="form-control" name="hiredate"/>
+
+                            </div>
+                        </div>
+                    </div>
+                   <!-- <div class="form-group">
+                        <label  class="col-md-offset-2 col-md-2 control-label">入职时间</label>
+                        <div class="col-md-6">
+                            <div class='input-group date' id='addHiredateDatetimepicker'>
+                                <input type='text' class="form-control" name="hiredate"/>
+                                <span class="input-group-addon">
+                                        <span class="glyphicon glyphicon-calendar"></span>
+                                    </span>
+                            </div>
+                        </div>
+                    </div>-->
+
+
+                    <div class="form-group modal-footer">
+                        <div class="col-md-offset-4 col-md-6">
+                            <button type="button" id="addSysuserBtn" class="btn btn-info">添加</button>
+                            <button type="button" id="resetSysuserBtn" class="btn btn-default">取消</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 显示详情以及更新模态框 -->
+    <div class="modal fade" id="detailWindow" role="dialog">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"
+                            aria-hidden="true">&times;</button>
+                    <h4 class="modal-title">员工信息详情</h4>
+                </div>
+                <form class="form-horizontal" id="detailForm" style="margin: 30px;">
+                    <input type="hidden" id="showId" name="id" />
+                    <div class="form-group">
+                        <label for="showTid" class="col-md-offset-2 col-md-2 control-label">编号</label>
+                        <div class="col-md-6">
+                            <input type="text" class="form-control" id="showTid" readonly />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="showName" class="col-md-offset-2 col-md-2 control-label">姓名</label>
+                        <div class="col-md-6">
+                            <input type="text" class="form-control" id="showName" readonly />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="showRole" class="col-md-offset-2 col-md-2 control-label">角色</label>
+                        <div class="col-md-6">
+                            <input type="text" class="form-control" id="showRole" readonly />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="showNation" class="col-md-offset-2 col-md-2 control-label">民族</label>
+                        <div class="col-md-6">
+                            <input type="text" class="form-control" id="showNation" readonly />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="showEdu" class="col-md-offset-2 col-md-2 control-label">学历</label>
+                        <div class="col-md-6">
+                            <input type="text" class="form-control" id="showEdu" readonly />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="showSchool" class="col-md-offset-2 col-md-2 control-label">毕业院校</label>
+                        <div class="col-md-6">
+                            <input type="text" class="form-control" id="showSchool" readonly />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="showGender" class="col-md-offset-2 col-md-2 control-label">性别</label>
+                        <div class="col-md-6">
+                            <input type="text" class="form-control" id="showGender" readonly />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="showEmail" class="col-md-offset-2 col-md-2 control-label">电子邮件</label>
+                        <div class="col-md-6">
+                            <input type="text" class="form-control" id="showEmail" name="email" />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="showBirth" class="col-md-offset-2 col-md-2 control-label">生日</label>
+                        <div class="col-md-6">
+                            <input type="text" class="form-control" id="showBirth" readonly />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="showMobile" class="col-md-offset-2 col-md-2 control-label">电话</label>
+                        <div class="col-md-6">
+                            <input type="text" class="form-control" id="showMobile" name="mobile" />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="showAddr" class="col-md-offset-2 col-md-2 control-label">地址</label>
+                        <div class="col-md-6">
+                            <input type="text" class="form-control" id="showAddr" name="address" />
+                        </div>
+                    </div>
+                    <!-- 头像 -->
+                    <div class="form-group">
+                        <label class="col-md-offset-2 col-md-2 control-label">头像</label>
+                        <div class="col-md-6">
+                            <img id="showPhoto" width="150" height="150" />
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="showEnterDate" class="col-md-offset-2 col-md-2 control-label">入职时间</label>
+                        <div class="col-md-6">
+                            <input type="text" class="form-control" id="showEnterDate" readonly />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="showLeaveDate" class="col-md-offset-2 col-md-2 control-label">离职时间</label>
+                        <div class="col-md-6">
+                            <input type="text" class="form-control" id="showLeaveDate" readonly />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="showState" class="col-md-offset-2 col-md-2 control-label">状态</label>
+                        <div class="col-md-6">
+                            <input type="text" class="form-control" id="showState" readonly />
+                        </div>
+                    </div>
+
+                    <div class="form-group modal-footer">
+                        <div class="col-md-offset-4 col-md-6">
+                            <button type="button" id="btn_detailSure" class="btn btn-info">更新</button>
+                            <button type="button" id="btn_detailCancel" class="btn btn-default">取消</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 修改头像模态框 -->
+    <div class="modal fade" id="updatePhoto">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <!-- 模态框头部-->
+                <div class="modal-header bg-primary">
+                    <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span></button>
+                    <h3>修改头像</h3>
+                </div> <!-- modal-header End -->
+                <div class="modal-body">
+                    <form enctype="multipart/form-data">
+                        <input id="userphoto" class="file-loading" type="file" name="photo">
+                    </form>
+                </div> <!-- modal-body end -->
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-info"  id="modalBtnCancel" style="width: 100px;">取消</button>
+                    <!--<button type="button" class="btn btn-info" id="modalBtnAdd">上传</button>-->
+                </div>
+            </div>
+        </div>
+    </div> <!-- 模态框结束div -->
+</div>
+</body>
+</html>

@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- 上述3个meta标签*必须*放在最前面，任何其他内容都*必须*跟随其后！ -->
+    <title>学生管理</title>
+
+    <link rel="stylesheet" href="../bootstrap/css/bootstrap.css">
+    <link rel="stylesheet" href="../bootstrap/css/bootstrap-table.css">
+
+    <link rel="stylesheet" href="../bootstrap/css/bootstrap-datetimepicker.css">
+    <!-- jQuery (Bootstrap 的所有 JavaScript 插件都依赖 jQuery，所以必须放在前边) -->
+    <script src="../js/jquery-3.1.1.min.js"></script>
+    <!-- 加载 Bootstrap 的所有 JavaScript 插件。你也可以根据需要只加载单个插件。 -->
+    <script src="../bootstrap/js/bootstrap.js"></script>
+    <script src="../bootstrap/js/bootbox.min.js"></script>
+
+    <script src="../bootstrap/js/bootstrap-table.js"></script>
+    <script src="../bootstrap/js/bootstrap-table-zh-CN.js"></script>
+    <script src="../bootstrap/js/fileinput.js"></script>
+    <script src="../bootstrap/js/fileinput_locale_zh.js"></script>
+    <script src="../bootstrap/js/bootstrap-datetimepicker.min.js"></script>
+    <script src="../bootstrap/js/bootstrap-datetimepicker.zh-CN.js"></script>
+
+    <script src="../js/global.js"></script>
+    <script>
+        // 从localStorage取出登录者信息
+        loginStr = localStorage.getItem("loginuser") ;
+        if (null == loginStr || loginStr == '') {
+            location.href="../Login.html" ;
+        }
+        // 将localStorage取出字符串转换js对象
+        loginUser = JSON.parse(loginStr) ;
+
+        $(function(){
+            $("#stuTable").bootstrapTable({
+                url : serverPath + 'student/pageData' ,
+                method : 'GET' ,
+                toolbar : '#toolbar' ,   // 为表格绑定工具栏
+                striped: true,			// 显示为斑马线格式，奇偶行不通背景色
+
+                showRefresh: "true",	// 显示刷新按钮
+                showToggle: "true",		// 显示格式切换按钮
+                showColumns: "true",	// 显示列过滤按钮
+
+                // 分页相关 ，如果分页，服務器端返回的数据需要包含有total属性和rows属性
+                pagination: true,		// 显示分页
+                pageNumber: 1,			// 初始化加载第一页
+                pageSize: 2,			// 每页2条数据
+                pageList: [2, 5, 10],	// 可以选择的每页数量
+                sidePagination: "server", //表示服务端请求分页数据
+
+                // 提交到Server的参数列表 ，
+                // 参数设定相关
+                queryParamsType: "undefined",  // undefined：提交到服务器端的参数自定义
+                queryParams: function(params) {
+                    // 参数params中自带 pageSize , pageNumber , sortName , sortOrder
+
+                    // 为params对象增加额外三个属性
+                    // params.nameKey = $.trim($("#search_uname").val()) ;
+                    // params.mobileKey = $.trim($("#search_mobile").val()) ;
+                    // params.gender = $('#formSearch input[name="gender"]:checked').val() ;
+
+                    var state = $('#formSearch input[name="state"]:checked').val() ;
+                    if("-1" != state) {
+                        params.state = $('#formSearch input[name="state"]:checked').val() ;
+                    }
+                    // var role = $('#formSearch input[name="role"]:checked').val() ;
+                    // if("-1" != role) {
+                    //     params.role = $('#formSearch input[name="role"]:checked').val() ;
+                    // }
+                    console.dir(params) ;
+                    return params ;
+                },
+
+                columns : [
+                    {checkbox : true} ,   // 显示为复选框*/
+                    {field : 'id' , title : 'id' , visible : false} ,
+                    {field:'sid' , title : '编号' , formatter: function(value , row , index){
+                            return  '<span class="showDetail" style="color:blue; cursor: pointer; ">'+ value +'</span>';
+                        },
+                       // events: updateEvent ,
+                    } ,
+                    {field : 'sname' , title : '姓名' } ,
+                    {field : 'gender' , title : '性别' } ,
+                    {field : 'classid' , title : '班级编号'} ,
+                    {field : 'enterdate' , title : '入园日期' } ,
+                    {field : 'state' , title : '状态' , formatter : function(value , row , index){
+                            switch(value) {
+                                case 0 :  return '在园' ;
+                                case 1 : return '离园';
+                            }
+                        } } ,
+
+                    {
+                        title : '操作' ,
+                        formatter: operateFormatter,
+                        events: operateEvent ,
+                    }
+
+                ] ,
+            });
+
+
+            // 搜索按钮动作
+            $("#btn_query").click(function(){
+                $("#stuTable").bootstrapTable('refresh') ;
+            });
+
+            // 工具栏"退园" 按钮操作
+            $("#btn_delete").click(function(){
+                // 获取所有选中行
+                var rows = $("#stuTable").bootstrapTable('getSelections');
+                //console.log(rows) ;
+                if(rows.length == 0) {
+                    bootbox.alert("请选中要退园的行!") ;
+                    return ;
+                }
+                // 获取所有选中行的id
+                var ids = "" ,count = 0;
+                for(i = 0 ;i < rows.length ;i++) {
+                    if(rows[i].state == 0) {
+                        ids += "ids=" + rows[i].id + "&" ;
+                        count++ ;
+                    }
+                }
+                // 确认退园
+                bootbox.confirm("确认" + count + "个学生退园?" , function(sure){
+                    if(sure) {
+                        // 连接服务器
+                        $.post(
+                            serverPath + "student/leaveMore?" + ids ,
+                            function(resData) {
+                                bootbox.alert(resData.errMsg) ;
+                                if(resData.errCode == 0) {
+                                    $("#stuTable").bootstrapTable('refresh') ;
+                                }
+                            }
+                        );
+                    }
+                })
+            });
+
+        })
+
+        function operateFormatter(value, row, index) {
+            var del = '<button  type="button" class="remove btn btn-xs btn-danger"' +
+                '<span class="glyphicon glyphicon-remove" aria-hidden="true"></span>退园' +
+                '</button>';
+            var change = '<button  type="button" class="change btn btn-xs btn-success"' +
+                '<span class="glyphicon glyphicon-remove" aria-hidden="true"></span>转正' +
+                '</button>';
+            if(row.state == 0) {  // 正式
+                return del ;
+            } else if(row.state == 2) { // 试用
+                return del + "&nbsp;&nbsp;" + change ;
+            }
+        }
+        window.operateEvent = {
+
+
+            //  离职处理
+            'click .remove' : function(e , value , row , index) {
+                // 删除逻辑处理
+                bootbox.confirm("确认员工离职?" , function(data){
+                    if(data) {
+                        $.post(
+                            serverPath + "employee/leave" ,
+                            'id=' + row.id ,
+                            function(responseData) {
+                                bootbox.alert(responseData.errMsg) ;
+                                if(0 == responseData.errCode) {
+                                    // 表格刷新
+                                    $("#empTable").bootstrapTable('refresh') ;
+                                }
+                            }
+                        );
+                    }
+                }) ;
+            } ,
+
+
+
+        }
+
+
+    </script>
+
+</head>
+<body>
+<div class="container-fluid">
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <h3 class="panel-title">查询条件</h3>
+            <form id="formSearch" class="form-horizontal">
+                <div class="form-group" style="margin-top:15px">
+                    <label class="control-label col-sm-2" for="search_uname">用户名</label>
+                    <div class="col-sm-4">
+                        <input type="text" class="form-control" id="search_uname">
+                    </div>
+                    <label class="control-label col-sm-2" for="search_mobile">电话</label>
+                    <div class="col-md-4">
+                        <input type="text" class="form-control" id="search_mobile">
+                    </div>
+
+                </div>
+                <div class="form-group" style="margin-top:15px">
+                    <label class="control-label col-sm-1" for="search_gender">性别</label>
+                    <div class="radio  col-sm-2">
+                        <label><input type="radio" name="gender" id="search_gender" value="" checked>忽略 </label>
+                        <label><input type="radio" name="gender" value="男">男</label>
+                        <label><input type="radio" name="gender" value="女">女</label>
+                    </div>
+                    <label class="control-label col-md-1" for="search_role">教职工</label>
+                    <div class="radio  col-md-2">
+                        <label><input type="radio" name="role" id="search_role" value="-1" checked>忽略 </label>
+                        <label><input type="radio" name="role" value="1">职工</label>
+                        <label><input type="radio" name="role" value="0">教工</label>
+                    </div>
+                    <label class="control-label col-md-1" for="status">状态</label>
+                    <div class="radio  col-md-2">
+                        <label><input type="radio" name="state" id="status" value="-1" checked>忽略 </label>
+                        <label><input type="radio" name="state" value="0">在园</label>
+                        <label><input type="radio" name="state" value="1">离园</label>
+                    </div>
+                    <div class="form-group" style="margin-top:15px">
+                        <div class="col-md-3" style="text-align:left;">
+                            <button type="button" style="margin-left:50px" id="btn_query" class="btn btn-primary">查询</button>
+                            <button type="reset" style="margin-left:50px" id="btn_reset" class="btn btn-info">清空</button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="panel-body">
+            <!-- 工具栏 -->
+            <div id="toolbar" class="btn-group">
+                <button id="btn_add" type="button" class="btn btn-success" data-toggle="modal" data-target="#addWindow">
+                    <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>新增
+                </button>
+                <button id="btn_delete" type="button" class="btn btn-danger">
+                    <span class="glyphicon glyphicon-remove" aria-hidden="true"></span>退园
+                </button>
+            </div>
+            <!-- table -->
+            <table id="stuTable"></table>
+        </div>
+    </div>
+
+</div>
+</body>
+</html>

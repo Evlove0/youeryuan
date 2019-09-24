@@ -1,0 +1,81 @@
+html,body,ul{
+    margin: 0;
+    padding: 0;
+}
+ul,li{
+    list-style: none;
+}
+/*将每个li标签转化成行元素  因为我们到时候是将这些照片并排来排列显示  */
+ul li{
+    display: inline;
+}
+/*再给ul设置一下宽度值和margin   margin四个值依次是上右下左 顺时针方向*/
+ul{
+    width: 970px;
+    margin:0 0 18px 10px ;
+}
+/*然后可以设置图片宽度，在没设置之前图片是占满了全屏*/
+ul img{
+    display: block;/*转为块元素*/
+    width: 190px;
+    margin-bottom: 12px;
+}
+/*再接着给图片设置边框  注意我们这里是用a标签包裹了img图片  所以我们如果要对图片进行留白边操作的话就设置a标签*/
+ul a{
+    background-color: #FFFFFF;
+    display: inline;/*转为行元素*/
+    float: left;/*左浮动*/
+    width: auto;
+    margin: 0 0 27px 30px;
+    padding: 10px 10px 15px;/*上内边距是 10px; 右、左内边距是10px;下内边距是 15px*/
+    text-decoration: none;
+    font-size: 17px;
+    color: #333333;
+    /*这里设置的box-shadow四个值意思是：水平位移0;垂直位移3px;模糊半径6px;阴影颜色rgba(0,0,0,0.25)*/
+    box-shadow: 0 3px 6px rgba(0,0,0,0.25) ;
+    -webkit-box-shadow: 0 3px 6px rgba(0,0,0,0.25);
+    -moz-box-shadow: 0 3px 6px rgba(0,0,0,0.25);
+    -o-box-shadow: 0 3px 6px rgba(0,0,0,0.25);
+    -ms-box-shadow: 0 3px 6px rgba(0,0,0,0.25);
+}
+ul li a:after{
+    content: attr(title);
+}
+ul li:nth-child(even) a {
+    -webkit-transform: rotate(2deg);
+    -moz-transform: rotate(2deg);
+    -ms-transform: rotate(2deg);
+    transform: rotate(2deg);
+}
+ul li:nth-child(5n) a {
+    -webkit-transform: rotate(5deg);
+    -moz-transform: rotate(5deg);
+    -ms-transform: rotate(5deg);
+    transform: rotate(5deg);
+    position: relative;
+    right: 5px;
+}
+ul li:nth-child(8n) a {
+    position: relative;
+    top: 8px;
+    right: 5px;
+}
+ul li:nth-child(11n) a {
+    position: relative;
+    top: 3px;
+    right: -5px;
+}
+ul li a:hover{
+    transform: scale(1.25);
+    -webkit-transform: scale(1.25);
+    -moz-transform: scale(1.25);
+    -ms-transform: scale(1.25);
+    -o-transform: scale(1.25);
+    /*为了使放大效果更佳美观  所以我们也可以将鼠标悬停时的阴影（透明度这一块）加点改变*/
+    box-shadow: 0 3px 6px rgba(0,0,0,0.25) ;
+    -webkit-box-shadow: 0 3px 6px rgba(0,0,0,5);
+    -moz-box-shadow: 0 3px 6px rgba(0,0,0,5);
+    -o-box-shadow: 0 3px 6px rgba(0,0,0,5);
+    -ms-box-shadow: 0 3px 6px rgba(0,0,0,5);
+}
+

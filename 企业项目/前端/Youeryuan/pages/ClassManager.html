@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<meta http-equiv="X-UA-Compatible" content="IE=edge">
+    	<meta name="viewport" content="width=device-width, initial-scale=1">
+    	<!-- 上述3个meta标签*必须*放在最前面，任何其他内容都*必须*跟随其后！ -->
+		<title>班级管理</title>
+		
+		<link rel="stylesheet" href="../bootstrap/css/bootstrap.css">
+        <link rel="stylesheet" href="../bootstrap/css/bootstrap-table.css">
+
+    	<link rel="stylesheet" href="../bootstrap/css/bootstrap-datetimepicker.css">
+    	<!-- jQuery (Bootstrap 的所有 JavaScript 插件都依赖 jQuery，所以必须放在前边) -->
+    	<script src="../js/jquery-3.1.1.min.js"></script>
+    	<!-- 加载 Bootstrap 的所有 JavaScript 插件。你也可以根据需要只加载单个插件。 -->
+    	<script src="../bootstrap/js/bootstrap.js"></script>
+    	<script src="../bootstrap/js/bootbox.min.js"></script>
+
+    	<script src="../bootstrap/js/bootstrap-table.js"></script>
+    	<script src="../bootstrap/js/bootstrap-table-zh-CN.js"></script>
+    	<script src="../bootstrap/js/fileinput.js"></script>
+    	<script src="../bootstrap/js/fileinput_locale_zh.js"></script>
+   		<script src="../bootstrap/js/bootstrap-datetimepicker.min.js"></script>
+    	<script src="../bootstrap/js/bootstrap-datetimepicker.zh-CN.js"></script>
+
+    	<script src="../js/global.js"></script>
+    	<script>
+    		// 从localStorage取出登录者信息
+        loginStr = localStorage.getItem("loginuser") ;
+        if (null == loginStr || loginStr == '') {
+            location.href="../Login.html" ;
+        }
+        // 将localStorage取出字符串转换js对象
+        loginUser = JSON.parse(loginStr) ;
+        
+        $(function(){
+            $("#roleTable").bootstrapTable({
+                url : serverPath + 'class/getAll' ,
+                method : 'get' ,
+                toolbar : '#toolbar' ,   // 为表格绑定工具栏
+                striped: true,			// 显示为斑马线格式，奇偶行不通背景色
+
+                columns : [
+                   /* {checkbox : true} ,   // 显示为复选框*/
+                    {field : 'id' , title : 'id'} ,
+                    {field : 'cid' , title : '班级id' } ,
+                    {field : 'name' , title : '班级名称'}
+                ] ,
+            });
+
+            // 添加管理员按钮动作
+            $("#addRoleBtn").click(function () {
+                $.post(
+                    serverPath + "class/add" ,
+                    $("#addRoleForm").serialize() ,
+                    function(responseData) {
+                        bootbox.alert(responseData.errMsg) ;
+                        if(0 == responseData.errCode) {
+                            $("#roleTable").bootstrapTable('refresh') ;
+                            // 清空表单数据
+                            $("#addRoleForm")[0].reset() ;
+                            // 关闭模态框
+                            $("#addWindow").modal("hide") ;
+                        }
+                    }
+                );
+            });
+            // 取消添加管理员按钮动作
+            $("#resetRoleBtn").click(function(){
+                $("#addRoleForm")[0].reset() ;
+                $("#addWindow").modal("hide") ;
+            });
+        });
+    	</script>
+    	
+	</head>
+	<body>
+		<div class="container-fluid">
+        <div class="panel panel-default">
+
+            <div class="panel-body">
+                <!-- 工具栏 -->
+                <div id="toolbar" class="btn-group">
+                    <button id="btn_add" type="button" class="btn btn-success" data-toggle="modal" data-target="#addWindow">
+                        <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>新增
+                    </button>
+                    <!--<button id="btn_delete" type="button" class="btn btn-danger">
+                        <span class="glyphicon glyphicon-remove" aria-hidden="true"></span>删除
+                    </button>-->
+                </div>
+                <!-- table -->
+                <table id="roleTable"></table>
+            </div>
+        </div>
+        <!-- 新增模态框 -->
+        <div class="modal fade" id="addWindow" role="dialog">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal"
+                                aria-hidden="true">&times;</button>
+                        <h4 class="modal-title">添加班级</h4>
+                    </div>
+                    <form class="form-horizontal" id="addRoleForm" style="margin: 30px;">
+                        <div class="form-group">
+                            <label for="id" class="col-md-offset-2 col-md-2 control-label">id</label>
+                            <div class="col-md-6">
+                                <input type="text" class="form-control" name="id" id="id"
+                                       placeholder="id">
+                            </div>
+                            <label for="cid" class="col-md-offset-2 col-md-2 control-label">cid</label>
+                            <div class="col-md-6">
+                                <input type="text" class="form-control" name="cid" id="cid"
+                                       placeholder="cid">
+                            </div>
+                            <label for="name" class="col-md-offset-2 col-md-2 control-label">name</label>
+                            <div class="col-md-6">
+                                <input type="text" class="form-control" name="name" id="name"
+                                       placeholder="name">
+                            </div>
+                        </div>
+
+                        <div class="form-group modal-footer">
+                            <div class="col-md-offset-4 col-md-6">
+                                <span id="returnMessage" class="glyphicon"></span>
+                                <button type="button" id="addRoleBtn" class="btn btn-info">添加</button>
+                                <button type="button" id="resetRoleBtn" class="btn btn-default">取消</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+	</body>
+</html>

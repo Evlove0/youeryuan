@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.isoft.youeryuan.dao.EmployeeDao">
+
+<!--
+    int update(@Param("id") Integer id , @Param("email") String email , @Param("mobile") String mobile , @Param("address") String address , @Param("photo") String photo) ;
+-->
+    <update id="update">
+        update tb_employee
+        <set>
+            <if test="email != null">
+                email = #{email},
+            </if>
+            <if test="mobile != null">
+                mobile = #{mobile},
+            </if>
+            <if test ="address != null">
+                address = #{address},
+            </if>
+            <if test="photo != null">
+                photo = #{photo},
+            </if>
+        </set>
+        where id=#{id}
+    </update>
+
+<!--
+    List<Employee> select(Integer offset , Integer rowCount , Integer role , String gender , String nameKey , String mobileKey , Integer state) ;
+-->
+    <select id="select" resultType="Employee">
+        select * from tb_employee
+        <where>
+            <if test="null != role">
+                and role=#{role}
+            </if>
+            <if test="null != gender">
+                and gender=#{gender}
+            </if>
+            <if test="null != nameKey">
+                <bind name="nameLike" value="'%' + nameKey + '%'"/>
+                and tname like #{nameLike}
+            </if>
+            <if test="null != mobileKey">
+                <bind name="mobileLike" value="'%' + mobileKey + '%'"/>
+                and mobile like #{mobileLike}
+            </if>
+            <if test="null != state">
+                and state = #{state}
+            </if>
+        </where>
+        limit ${offset} , ${rowCount}
+    </select>
+
+<!--
+    int selectCount(Integer role , String gender , String nameKey , String mobileKey , Integer state) ;
+-->
+    <select id="selectCount" resultType="int">
+        select count(*) from tb_employee
+        <where>
+            <if test="null != role">
+                and role=#{role}
+            </if>
+            <if test="null != gender">
+                and gender=#{gender}
+            </if>
+            <if test="null != nameKey">
+                <bind name="nameLike" value="'%' + nameKey + '%'"/>
+                and tname like #{nameLike}
+            </if>
+            <if test="null != mobileKey">
+                <bind name="mobileLike" value="'%' + mobileKey + '%'"/>
+                and mobile like #{mobileLike}
+            </if>
+            <if test="null != state">
+                and state = #{state}
+            </if>
+        </where>
+    </select>
+</mapper>

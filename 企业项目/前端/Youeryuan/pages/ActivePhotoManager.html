@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <link rel="stylesheet" href="../css/photo.css">
+    <link rel="stylesheet" href="../bootstrap/css/bootstrap.css">
+    <link rel="stylesheet" href="../bootstrap/css/bootstrap-table.css">
+
+    <link rel="stylesheet" href="../bootstrap/css/bootstrap-datetimepicker.css">
+    <!-- jQuery (Bootstrap 的所有 JavaScript 插件都依赖 jQuery，所以必须放在前边) -->
+    <script src="../js/jquery-3.1.1.min.js"></script>
+    <!-- 加载 Bootstrap 的所有 JavaScript 插件。你也可以根据需要只加载单个插件。 -->
+    <script src="../bootstrap/js/bootstrap.js"></script>
+    <script src="../bootstrap/js/bootbox.min.js"></script>
+
+    <script src="../bootstrap/js/fileinput.js"></script>
+    <script src="../bootstrap/js/fileinput_locale_zh.js"></script>
+
+    <script src="../js/global.js"></script>
+</head>
+
+<script>
+    var aid = localStorage.getItem("id");
+    console.log(aid+"photo");
+    var postData = {
+         id: aid
+    }
+
+</script>
+<script>
+
+
+    $(function () {
+        $("#aid").val(aid);
+        $.post(
+            serverPath+"activePhoto/selectPhotoByAid",
+            postData,
+            function (responseData) {
+                // var photoUrl = JSON.parse(responseData.date);
+                var photoUrl1= responseData.data;
+                console.log(photoUrl1);
+                var imgNum =photoUrl1.length;
+                console.log("拥有图片"+imgNum+"个")
+                if (imgNum<1){
+                    $("ul").append('<h2>暂无照片请上传...</h2>')
+                }
+                else {
+                    for (var i=0;i<=imgNum;i++) {
+                        $("ul").append( '  <li class=""> '+'<a ><img src="'+photoUrl1[i].photo+'"/></a>'+'</li>')
+                        // $("ul").append('  <li id="photo_"+i class=""> ' + '<img src="'+'file/201909201706070040_1.jpg'+'"/>' + '图片' + '</li>')
+                    }
+                }
+            }
+        )
+    });
+   /* var FileInput = function () {
+        var oFile = new Object();
+
+        //初始化fileinput控件（第一次初始化）
+        oFile.Init = function(ctrlName, uploadUrl) {
+            var control = $('#' + ctrlName);
+
+            //初始化上传控件的样式
+            control.fileinput({
+                language: 'zh', //设置语言
+                uploadUrl: uploadUrl, //上传的地址
+                allowedFileExtensions : ['jpg', 'png','gif'],
+                maxFileSize : 2048,			// 以kb为单位
+                maxFilesNum: 1,
+
+                showUpload: true, //是否显示上传按钮
+                showCaption: false,//是否显示标题
+                browseClass: "btn btn-primary", //按钮样式
+                //dropZoneEnabled: false,//是否显示拖拽区域
+                //minImageWidth: 50, //图片的最小宽度
+                //minImageHeight: 50,//图片的最小高度
+                //maxImageWidth: 1000,//图片的最大宽度
+                //maxImageHeight: 1000,//图片的最大高度
+                //maxFileSize: 0,//单位为kb，如果为0表示不限制文件大小
+                //minFileCount: 0,
+                enctype: 'multipart/form-data',
+                previewFileIcon: "<i class='glyphicon glyphicon-king'></i>",
+            });
+
+            //导入文件上传完成之后的事件
+            $("#userphoto").on("fileuploaded", function (event, data, previewId, index) {
+                $("#updatePhoto").modal("hide");
+                console.log(data) ;
+                var responseData = data.response ;
+                if(responseData.errCode === 0) {
+                    bootbox.alert('上传成功');
+                    // 清除文件上传预览框
+                    $(event.target).fileinput('clear') ;
+                    // 刷新头像
+                    $("#showPhoto").attr('src' , responseData.data)
+
+                    // 更新数据存储
+                    loginUser.photourl = responseData.data ;
+                    localStorage.setItem('loginuser' , JSON.stringify(loginUser)) ;
+                    // 刷新index页面头像显示
+                    console.log($("#showLoginPhoto", window.parent.document));
+                    $("#showLoginPhoto", window.parent.document).attr("src", responseData.data);
+
+                }
+            }).on("fileerror" , function(event , data , msg){
+                console.log(msg) ;
+            }) ;
+        }
+        return oFile;
+    };*/
+
+
+
+
+</script>
+<body>
+<div class="container">
+    <div class="row">
+        <ul class="photo"></ul>
+    </div>
+    <div class="row" style="margin-top: 50px">
+        <div class="col-sm-10"></div>
+        <div class="col-sm-2">
+        <button id="btn_add" type="button" class="btn btn-success" data-toggle="modal" data-target="#updatePhoto">
+            <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>新增
+        </button>
+        </div>
+    </div>
+</div>
+<!--<button id="showPhoto" data-toggle="modal" data-target="#updatePhoto"/>点击长传</button>-->
+
+<div class="container">
+
+
+</div>
+<div class="modal fade" id="updatePhoto">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <!-- 模态框头部-->
+            <div class="modal-header bg-primary">
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span></button>
+                <h3>请选择要上传的图片</h3>
+            </div> <!-- modal-header End -->
+            <div class="modal-body">
+                <form action="http://localhost:8080/activePhoto/uploadActivePhoto" method="post" enctype="multipart/form-data"  target="frame1">
+                    <span>&nbsp;&nbsp;&nbsp;&nbsp;</span><input type="file" name="photo"><br>
+                    <input id="photoUp" type="submit" value="提交" onclick="history.go(0)"  class="btn btn-success">
+                    <input id="aid" name="id"  hidden>
+                </form>
+                <iframe name="frame1" frameborder="0" height="40" hidden></iframe>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

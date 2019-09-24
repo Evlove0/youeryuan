@@ -1,0 +1,94 @@
+[
+  {
+    "text": "<span class='glyphicon glyphicon-th-list' /> 系统管理",
+    "backColor": "#428bca",
+    "color": "#ffffff",
+    "selectable": false,
+    "state": {
+      "expanded":true
+    },
+    "nodes": [
+      {
+        "text": "<span class='glyphicon glyphicon-book' /> 个人中心",
+        "href":"pages/SysuserCenter.html"
+      },
+      {
+        "text": "<span class='glyphicon glyphicon-user' /> 系统用户管理",
+        "href":"pages/SysManager.html"
+      },
+      {
+        "text": "<span class='glyphicon glyphicon-duplicate' /> 角色管理",
+        "href":"pages/RoleManager.html"
+      }
+    ]
+  },
+  {
+    "text": "<span class='glyphicon glyphicon-inbox' />  职工管理",
+    "backColor": "#428bca",
+    "color": "#ffffff",
+    "selectable": false,
+    "state": {
+      "expanded":false
+    },
+    "nodes": [
+      {
+        "text": "<span class='glyphicon glyphicon-paperclip' /> 教职工管理",
+        "href":"pages/EmployeeManager.html"
+      }
+    ]
+  },
+  {
+    "text": "<span class='glyphicon glyphicon-indent-left' />  班级及幼儿信息管理",
+    "backColor": "#428bca",
+    "color": "#ffffff",
+    "selectable": false,
+    "state": {
+      "expanded":false
+    },
+    "nodes": [
+      {
+        "text": "<span class='glyphicon glyphicon-align-center' /> 班级管理",
+        "href":"pages/classManager.html"
+      },
+      {
+        "text": "<span class='glyphicon glyphicon-user' /> 学生管理",
+        "href":"pages/studentManager.html"
+      }
+    ]
+  },
+  {
+    "text": "<span class='glyphicon glyphicon-transfer' />  资讯管理",
+    "backColor": "#428bca",
+    "color": "#ffffff",
+    "selectable": false,
+    "state": {
+      "expanded":false
+    },
+    "nodes": [
+      {
+        "text": "<span class='glyphicon glyphicon-flag' /> 校园资讯管理",
+        "href":"pages/NoticeManager.html"
+      },
+      {
+        "text": "<span class='glyphicon glyphicon-picture' /> 学生活动管理",
+        "href":"pages/ActiveManager.html"
+      }
+    ]
+  },
+  {
+    "text": "<span class='glyphicon glyphicon-inbox' />  食谱管理",
+    "backColor": "#428bca",
+    "color": "#ffffff",
+    "selectable": false,
+    "state": {
+      "expanded":false
+    },
+    "nodes": [
+      {
+        "text": "<span class='glyphicon glyphicon-paperclip' /> 食谱管理",
+        "href":"pages/Manager.html"
+      }
+    ]
+  }
+]
+
